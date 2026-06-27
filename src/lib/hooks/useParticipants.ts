@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Participant } from '@/types/app';
 
@@ -23,19 +23,22 @@ function mapRow(r: RawParticipant): Participant {
 export function useParticipants(sessionId: string) {
   const [participants, setParticipants] = useState<Participant[]>([]);
 
+  const fetchParticipants = useCallback(async () => {
+    if (!sessionId) return;
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('session_participants')
+      .select('*')
+      .eq('session_id', sessionId);
+    if (error) console.error('[useParticipants] fetch error:', error);
+    if (data) setParticipants((data as RawParticipant[]).map(mapRow));
+  }, [sessionId]);
+
   useEffect(() => {
+    fetchParticipants();
     if (!sessionId) return;
 
     const supabase = createClient();
-
-    supabase
-      .from('session_participants')
-      .select('*')
-      .eq('session_id', sessionId)
-      .then(({ data }) => {
-        if (data) setParticipants((data as RawParticipant[]).map(mapRow));
-      });
-
     const channel = supabase
       .channel(`participants:${sessionId}`)
       .on(
@@ -46,25 +49,12 @@ export function useParticipants(sessionId: string) {
           table: 'session_participants',
           filter: `session_id=eq.${sessionId}`,
         },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setParticipants(prev => [...prev, mapRow(payload.new as RawParticipant)]);
-          }
-          if (payload.eventType === 'UPDATE') {
-            setParticipants(prev =>
-              prev.map(p =>
-                p.userId === (payload.new as RawParticipant).user_id
-                  ? mapRow(payload.new as RawParticipant)
-                  : p
-              )
-            );
-          }
-        }
+        () => { fetchParticipants(); }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [sessionId]);
+  }, [sessionId, fetchParticipants]);
 
-  return participants;
+  return { participants, refetch: fetchParticipants };
 }

@@ -32,7 +32,7 @@ export default function SessaoPage() {
   const [joiningName, setJoiningName] = useState(false);
   const [valuesTree, setValuesTree] = useState<ValueNode | null>(null);
 
-  const participants = useParticipants(session?.id ?? '');
+  const { participants, refetch: refetchParticipants } = useParticipants(session?.id ?? '');
 
   useEffect(() => {
     async function init() {
@@ -91,12 +91,14 @@ export default function SessaoPage() {
     if (!displayName.trim() || !session || !userId) return;
     setJoiningName(true);
     const supabase = createClient();
-    await supabase.from('session_participants').insert({
+    const { error } = await supabase.from('session_participants').insert({
       session_id: session.id,
       user_id: userId,
       display_name: displayName.trim(),
     });
+    if (error) console.error('[handleJoin] insert error:', error);
     setJoiningName(false);
+    await refetchParticipants();
     setPageState('select');
   };
 
@@ -118,6 +120,7 @@ export default function SessaoPage() {
       .eq('session_id', session.id)
       .eq('user_id', userId);
 
+    await refetchParticipants();
     setPageState('submitted');
   };
 
