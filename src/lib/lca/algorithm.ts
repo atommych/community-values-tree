@@ -26,7 +26,7 @@ export function computeLCA(
     coverageSets.push(coverage);
   }
 
-  let intersection = new Set(coverageSets[0]);
+  const intersection = new Set(coverageSets[0]);
   for (let i = 1; i < coverageSets.length; i++) {
     for (const id of intersection) {
       if (!coverageSets[i].has(id)) intersection.delete(id);
