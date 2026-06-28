@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { SessionCard } from '@/components/session/SessionCard';
 import { Button } from '@/components/ui/button';
+import { LogoutButton } from '@/components/ui/LogoutButton';
 import type { Session, Participant } from '@/types/app';
 
 export default async function DashboardPage() {
@@ -54,9 +55,12 @@ export default async function DashboardPage() {
             <h1 className="text-2xl font-extrabold text-slate-900">Minhas Sessões</h1>
             <p className="text-slate-500 text-sm mt-1">Gerencie suas dinâmicas de valores</p>
           </div>
-          <Button asChild>
-            <Link href="/sessao/criar">+ Nova sessão</Link>
-          </Button>
+          <div className="flex gap-2">
+            <LogoutButton />
+            <Button asChild>
+              <Link href="/sessao/criar">+ Nova sessão</Link>
+            </Button>
+          </div>
         </div>
 
         {sessions.length === 0 ? (
