@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 interface BackButtonProps {
   fallback?: string;
   label?: string;
+  alwaysUseFallback?: boolean;
 }
 
-export function BackButton({ fallback = '/dashboard', label = '← Voltar' }: BackButtonProps) {
+export function BackButton({ fallback = '/dashboard', label = '← Voltar', alwaysUseFallback = false }: BackButtonProps) {
   const router = useRouter();
 
   const handleBack = () => {
-    if (window.history.length > 1) {
+    if (!alwaysUseFallback && window.history.length > 1) {
       router.back();
     } else {
       router.push(fallback);

@@ -77,7 +77,7 @@ export default async function ResultadoPage({ params }: ResultadoPageProps) {
       <div className="max-w-6xl mx-auto px-4 py-10">
         {/* Top navigation */}
         <div className="flex items-center justify-between mb-8">
-          <BackButton fallback="/dashboard" label="← Voltar" />
+          <BackButton fallback="/dashboard" label="← Voltar" alwaysUseFallback />
           <div className="flex gap-2">
             {canEdit && (
               <Button asChild size="sm">
