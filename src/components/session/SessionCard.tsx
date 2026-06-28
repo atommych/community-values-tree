@@ -11,9 +11,10 @@ import { useRouter } from 'next/navigation';
 interface SessionCardProps {
   session: Session;
   participants: Participant[];
+  isOwner?: boolean;
 }
 
-export function SessionCard({ session, participants }: SessionCardProps) {
+export function SessionCard({ session, participants, isOwner = true }: SessionCardProps) {
   const [copied, setCopied] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -63,9 +64,14 @@ export function SessionCard({ session, participants }: SessionCardProps) {
             </span>
           </p>
         </div>
-        <Badge variant={session.isActive ? 'default' : 'secondary'}>
-          {session.isActive ? 'Ativa' : 'Encerrada'}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {!isOwner && (
+            <Badge variant="secondary" className="text-xs">Participante</Badge>
+          )}
+          <Badge variant={session.isActive ? 'default' : 'secondary'}>
+            {session.isActive ? 'Ativa' : 'Encerrada'}
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-slate-600 mb-2">
@@ -79,19 +85,29 @@ export function SessionCard({ session, participants }: SessionCardProps) {
         </div>
       </CardContent>
       <CardFooter className="gap-2 flex-wrap">
-        <Button variant="outline" size="sm" onClick={copyLink}>
-          {copied ? '✓ Copiado!' : 'Copiar link'}
-        </Button>
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/sessao/${session.code}`}>Novo participante</Link>
-        </Button>
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/sessao/${session.code}?editar=1`}>Editar respostas</Link>
-        </Button>
+        {isOwner && (
+          <Button variant="outline" size="sm" onClick={copyLink}>
+            {copied ? '✓ Copiado!' : 'Copiar link'}
+          </Button>
+        )}
+        {isOwner && (
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/sessao/${session.code}`}>Novo participante</Link>
+          </Button>
+        )}
+        {session.isActive ? (
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/sessao/${session.code}?editar=1`}>Editar respostas</Link>
+          </Button>
+        ) : (
+          <Button variant="outline" size="sm" disabled title="Sessão encerrada">
+            Editar respostas
+          </Button>
+        )}
         <Button asChild size="sm">
           <Link href={`/sessao/${session.code}/resultado`}>Ver resultado</Link>
         </Button>
-        {session.isActive && (
+        {isOwner && session.isActive && (
           <Button
             variant="outline"
             size="sm"
@@ -101,14 +117,16 @@ export function SessionCard({ session, participants }: SessionCardProps) {
             {isDeactivating ? 'Desativando...' : 'Desativar sessão'}
           </Button>
         )}
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={deleteSession}
-          disabled={isDeleting}
-        >
-          {isDeleting ? 'Apagando...' : 'Apagar sessão'}
-        </Button>
+        {isOwner && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={deleteSession}
+            disabled={isDeleting}
+          >
+            {isDeleting ? 'Apagando...' : 'Apagar sessão'}
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
