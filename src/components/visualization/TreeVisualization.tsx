@@ -19,12 +19,13 @@ const nodeTypes = { valueNode: ValueNodeComponent };
 interface TreeVisualizationProps {
   treeRoot: ValueNode;
   lcaResult: LCAResult;
+  visibleNodeIds: string[];
 }
 
-export function TreeVisualization({ treeRoot, lcaResult }: TreeVisualizationProps) {
+export function TreeVisualization({ treeRoot, lcaResult, visibleNodeIds }: TreeVisualizationProps) {
   const { nodes, edges } = useMemo(
-    () => buildFlowGraph(treeRoot, lcaResult),
-    [treeRoot, lcaResult]
+    () => buildFlowGraph(treeRoot, lcaResult, visibleNodeIds),
+    [treeRoot, lcaResult, visibleNodeIds]
   );
 
   return (
@@ -70,9 +71,11 @@ function valueNodeToD3(node: ValueNode): D3Node {
 
 function buildFlowGraph(
   treeRoot: ValueNode,
-  lcaResult: LCAResult
+  lcaResult: LCAResult,
+  visibleNodeIds: string[]
 ): { nodes: Node[]; edges: Edge[] } {
   const commonSet = new Set(lcaResult.commonAncestorIds);
+  const visibleSet = new Set(visibleNodeIds);
   const d3Root = hierarchy<D3Node>(valueNodeToD3(treeRoot));
 
   const treeLayout = tree<D3Node>().nodeSize([160, 200]);
@@ -82,6 +85,8 @@ function buildFlowGraph(
   const edges: Edge[] = [];
 
   d3Root.each((d) => {
+    if (!visibleSet.has(d.data.id)) return;
+
     const isLCA = d.data.id === lcaResult.lcaNode.id;
     const isCommon = commonSet.has(d.data.id);
 
@@ -98,7 +103,7 @@ function buildFlowGraph(
       },
     });
 
-    if (d.parent) {
+    if (d.parent && visibleSet.has(d.parent.data.id)) {
       edges.push({
         id: `e-${d.parent.data.id}-${d.data.id}`,
         source: d.parent.data.id,

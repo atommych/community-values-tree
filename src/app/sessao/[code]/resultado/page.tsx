@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
-import { buildTree } from '@/lib/lca/tree';
+import { buildTree, flattenTree, getAncestorPath } from '@/lib/lca/tree';
 import { computeLCA } from '@/lib/lca/algorithm';
 import type { ValueRow, Participant } from '@/types/app';
 import { TreeVisualization } from '@/components/visualization/TreeVisualization';
@@ -48,6 +48,18 @@ export default async function ResultadoPage({ params }: ResultadoPageProps) {
   const treeRoot = buildTree(valueRows);
   const hasResults = selections.size > 0;
   const lcaResult = hasResults ? computeLCA(valueRows, selections) : null;
+  const visibleNodeIds = hasResults
+    ? (() => {
+        const nodeMap = flattenTree(treeRoot);
+        const visible = new Set<string>([treeRoot.id]);
+        for (const valueIds of selections.values()) {
+          for (const valueId of valueIds) {
+            getAncestorPath(valueId, nodeMap).forEach(id => visible.add(id));
+          }
+        }
+        return Array.from(visible);
+      })()
+    : [];
 
   return (
     <main className="min-h-screen bg-slate-50">
@@ -92,7 +104,7 @@ export default async function ResultadoPage({ params }: ResultadoPageProps) {
             {lcaResult && (
               <div className="mb-10">
                 <h3 className="text-lg font-bold text-slate-900 mb-4">Árvore de Valores</h3>
-                <TreeVisualization treeRoot={treeRoot} lcaResult={lcaResult} />
+                <TreeVisualization treeRoot={treeRoot} lcaResult={lcaResult} visibleNodeIds={visibleNodeIds} />
                 <p className="text-xs text-slate-400 mt-2 text-center">
                   Nós destacados = valores em comum · Use scroll para zoom · Arraste para mover
                 </p>
