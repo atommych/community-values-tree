@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -23,30 +23,57 @@ interface TreeVisualizationProps {
 }
 
 export function TreeVisualization({ treeRoot, lcaResult, visibleNodeIds }: TreeVisualizationProps) {
+  const [showAllValues, setShowAllValues] = useState(false);
   const { nodes, edges } = useMemo(
-    () => buildFlowGraph(treeRoot, lcaResult, visibleNodeIds),
-    [treeRoot, lcaResult, visibleNodeIds]
+    () => buildFlowGraph(treeRoot, lcaResult, visibleNodeIds, showAllValues),
+    [treeRoot, lcaResult, visibleNodeIds, showAllValues]
   );
 
   return (
-    <div className="w-full h-[600px] rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.3 }}
-        minZoom={0.2}
-        maxZoom={2}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background gap={24} size={1} color="#e2e8f0" />
-        <Controls />
-        <MiniMap
-          nodeColor={(n) => (n.data as { color?: string }).color ?? '#94a3b8'}
-          maskColor="rgba(241,245,249,0.7)"
-        />
-      </ReactFlow>
+    <div>
+      <div className="mb-3 flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => setShowAllValues(true)}
+          className={`rounded-md px-3 py-1.5 text-sm font-medium border transition-colors ${
+            showAllValues
+              ? 'bg-slate-900 text-white border-slate-900'
+              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+          }`}
+        >
+          Árvore de Valores (todos)
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowAllValues(false)}
+          className={`rounded-md px-3 py-1.5 text-sm font-medium border transition-colors ${
+            !showAllValues
+              ? 'bg-slate-900 text-white border-slate-900'
+              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+          }`}
+        >
+          Remover não selecionados
+        </button>
+      </div>
+      <div className="w-full h-[600px] rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.3 }}
+          minZoom={0.2}
+          maxZoom={2}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background gap={24} size={1} color="#e2e8f0" />
+          <Controls />
+          <MiniMap
+            nodeColor={(n) => (n.data as { color?: string }).color ?? '#94a3b8'}
+            maskColor="rgba(241,245,249,0.7)"
+          />
+        </ReactFlow>
+      </div>
     </div>
   );
 }
@@ -72,10 +99,11 @@ function valueNodeToD3(node: ValueNode): D3Node {
 function buildFlowGraph(
   treeRoot: ValueNode,
   lcaResult: LCAResult,
-  visibleNodeIds: string[]
+  visibleNodeIds: string[],
+  showAllValues: boolean
 ): { nodes: Node[]; edges: Edge[] } {
   const commonSet = new Set(lcaResult.commonAncestorIds);
-  const visibleSet = new Set(visibleNodeIds);
+  const visibleSet = showAllValues ? null : new Set(visibleNodeIds);
   const d3Root = hierarchy<D3Node>(valueNodeToD3(treeRoot));
 
   const treeLayout = tree<D3Node>().nodeSize([160, 200]);
@@ -85,7 +113,7 @@ function buildFlowGraph(
   const edges: Edge[] = [];
 
   d3Root.each((d) => {
-    if (!visibleSet.has(d.data.id)) return;
+    if (visibleSet && !visibleSet.has(d.data.id)) return;
 
     const isLCA = d.data.id === lcaResult.lcaNode.id;
     const isCommon = commonSet.has(d.data.id);
@@ -103,7 +131,7 @@ function buildFlowGraph(
       },
     });
 
-    if (d.parent && visibleSet.has(d.parent.data.id)) {
+    if (d.parent && (!visibleSet || visibleSet.has(d.parent.data.id))) {
       edges.push({
         id: `e-${d.parent.data.id}-${d.data.id}`,
         source: d.parent.data.id,
