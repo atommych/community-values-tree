@@ -28,9 +28,9 @@ export function ValueSelector({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (typeof window === 'undefined') return 'boxes';
+    if (typeof window === 'undefined') return 'lookup';
     const stored = sessionStorage.getItem(SESSION_KEY);
-    return stored === 'boxes' || stored === 'lookup' ? stored : 'boxes';
+    return stored === 'boxes' || stored === 'lookup' ? stored : 'lookup';
   });
 
   const handleViewMode = (mode: ViewMode) => {

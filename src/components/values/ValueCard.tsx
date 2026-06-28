@@ -24,14 +24,16 @@ export function ValueCard({ value, isSelected, onToggle, disabled, branchColor }
         'hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2',
         isSelected
           ? 'border-transparent text-white shadow-lg scale-[1.02]'
-          : 'border-slate-200 bg-white hover:border-slate-300',
+          : 'border-slate-200 bg-white text-slate-900 hover:border-slate-300',
         disabled && !isSelected && 'opacity-40 cursor-not-allowed'
       )}
       style={isSelected ? { backgroundColor: branchColor ?? '#6366f1' } : undefined}
       aria-pressed={isSelected}
       type="button"
     >
-      <p className="font-semibold text-sm leading-tight truncate pr-5">{value.name}</p>
+      <p className={cn('font-semibold text-sm leading-tight truncate pr-5', isSelected ? 'text-white' : 'text-slate-900')}>
+        {value.name || '—'}
+      </p>
 
       {/* Touch-device info icon */}
       {value.description && (
