@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ValueSelector } from '@/components/values/ValueSelector';
 import { ParticipantList } from '@/components/session/ParticipantList';
@@ -23,7 +23,9 @@ interface SessionInfo {
 export default function SessaoPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const code = (params.code as string).toUpperCase();
+  const isEditMode = searchParams.get('editar') === '1';
 
   const [pageState, setPageState] = useState<PageState>('loading');
   const [session, setSession] = useState<SessionInfo | null>(null);
@@ -63,9 +65,35 @@ export default function SessaoPage() {
         .eq('user_id', user.id)
         .single();
 
-      if (participant?.submitted_at) {
+      if (participant?.submitted_at && !isEditMode) {
         setPageState('submitted');
         return;
+      }
+
+      if (participant?.submitted_at && isEditMode) {
+        const { error: deleteError } = await supabase
+          .from('user_values')
+          .delete()
+          .eq('session_id', sessData.id)
+          .eq('user_id', user.id);
+
+        if (deleteError) {
+          console.error('[sessao] failed to clear existing values:', deleteError);
+          setPageState('submitted');
+          return;
+        }
+
+        const { error: updateError } = await supabase
+          .from('session_participants')
+          .update({ submitted_at: null })
+          .eq('session_id', sessData.id)
+          .eq('user_id', user.id);
+
+        if (updateError) {
+          console.error('[sessao] failed to reset participant submission:', updateError);
+          setPageState('submitted');
+          return;
+        }
       }
 
       const res = await fetch('/api/valores');
@@ -84,7 +112,7 @@ export default function SessaoPage() {
       }
     }
     init();
-  }, [code, router]);
+  }, [code, isEditMode, router]);
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();

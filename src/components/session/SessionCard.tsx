@@ -52,9 +52,15 @@ export function SessionCard({ session, participants }: SessionCardProps) {
           />
         </div>
       </CardContent>
-      <CardFooter className="gap-2">
+      <CardFooter className="gap-2 flex-wrap">
         <Button variant="outline" size="sm" onClick={copyLink}>
           {copied ? '✓ Copiado!' : 'Copiar link'}
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/sessao/${session.code}`}>Novo participante</Link>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/sessao/${session.code}?editar=1`}>Editar respostas</Link>
         </Button>
         <Button asChild size="sm">
           <Link href={`/sessao/${session.code}/resultado`}>Ver resultado</Link>
