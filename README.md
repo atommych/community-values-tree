@@ -1,4 +1,26 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+The database is Supabase (PostgreSQL). The values are stored in a hierarchical tree:
+- Level 0 — Root (1 node: Autonomia)
+- Level 1 — Branches (currently 10, changing to 12)
+- Level 2 — Leaves (133 selectable values)
+
+Users select 5–10 leaf values. The app's core algorithm finds the common ancestor (trunk) shared by all participants' selections. More granular branches produce more meaningful trunk results.
+
+## Distribution
+
+| Branch | Leaves                                  |
+|---|-----------------------------------------|
+| Empatia | 16                                      |
+| Integridade | 14                                      |
+| Crescimento | 22                                      | 
+| Relacionamentos | 13                                      |
+| Propósito | 8                                       |
+| Equilíbrio | 19                                      |
+| Coragem | 18                                      |
+| Justiça | 8                                       |
+| Criatividade | 8                                       |
+| Felicidade | 7                                       |
+| **Total** | **133 leaves, 12 branches, 1 root = 146 nodes** |
 
 ## Getting Started
 
