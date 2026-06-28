@@ -29,6 +29,17 @@ CREATE POLICY "sessions_update_own"
   ON sessions FOR UPDATE
   USING (facilitator_id = auth.uid());
 
+-- Helper to avoid RLS infinite recursion when querying session_participants
+-- from within a session_participants policy
+CREATE OR REPLACE FUNCTION get_my_session_ids()
+RETURNS SETOF uuid
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT session_id FROM session_participants WHERE user_id = auth.uid();
+$$;
+
 -- ── session_participants ──
 -- Participante vê sua própria linha; facilitador vê todos da sessão;
 -- outros participantes da mesma sessão também veem (para a lista ao vivo)
@@ -39,9 +50,7 @@ CREATE POLICY "participants_read"
     OR session_id IN (
       SELECT id FROM sessions WHERE facilitator_id = auth.uid()
     )
-    OR session_id IN (
-      SELECT session_id FROM session_participants WHERE user_id = auth.uid()
-    )
+    OR session_id IN (SELECT get_my_session_ids())
   );
 
 -- Usuário só insere ele mesmo
