@@ -31,28 +31,18 @@ export function TreeVisualization({ treeRoot, lcaResult, visibleNodeIds }: TreeV
 
   return (
     <div>
-      <div className="mb-3 flex justify-end gap-2">
+      <div className="mb-3 flex justify-end">
         <button
           type="button"
-          onClick={() => setShowAllValues(true)}
+          onClick={() => setShowAllValues((prev) => !prev)}
+          aria-pressed={showAllValues}
           className={`rounded-md px-3 py-1.5 text-sm font-medium border transition-colors ${
             showAllValues
               ? 'bg-slate-900 text-white border-slate-900'
               : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
           }`}
         >
-          Árvore de Valores (todos)
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowAllValues(false)}
-          className={`rounded-md px-3 py-1.5 text-sm font-medium border transition-colors ${
-            !showAllValues
-              ? 'bg-slate-900 text-white border-slate-900'
-              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-          }`}
-        >
-          Remover não selecionados
+          Mostrar todos Valores
         </button>
       </div>
       <div className="w-full h-[600px] rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
