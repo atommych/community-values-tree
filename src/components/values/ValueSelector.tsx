@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import type { ValueNode } from '@/types/app';
 import { ValueCard } from './ValueCard';
 import { ValueLookup } from './ValueLookup';
@@ -27,15 +27,11 @@ export function ValueSelector({
 }: ValueSelectorProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('boxes');
-
-  // Restore persisted view mode from sessionStorage
-  useEffect(() => {
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window === 'undefined') return 'boxes';
     const stored = sessionStorage.getItem(SESSION_KEY);
-    if (stored === 'boxes' || stored === 'lookup') {
-      setViewMode(stored);
-    }
-  }, []);
+    return stored === 'boxes' || stored === 'lookup' ? stored : 'boxes';
+  });
 
   const handleViewMode = (mode: ViewMode) => {
     setViewMode(mode);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import type { ValueNode } from '@/types/app';
 import { Input } from '@/components/ui/input';
@@ -56,7 +56,7 @@ export function ValueLookup({ tree, selected, onToggle, maxSelections }: ValueLo
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
-  const allLeaves = useRef<FlatLeaf[]>(flattenLeaves(tree));
+  const allLeaves = useMemo(() => flattenLeaves(tree), [tree]);
 
   // Debounce query
   useEffect(() => {
@@ -67,12 +67,13 @@ export function ValueLookup({ tree, selected, onToggle, maxSelections }: ValueLo
     return () => clearTimeout(timer);
   }, [query]);
 
-  const results = debouncedQuery.length >= 2
-    ? allLeaves.current.filter(leaf =>
-        leaf.name.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
-        (leaf.description?.toLowerCase().includes(debouncedQuery.toLowerCase()) ?? false)
-      )
-    : [];
+  const results = useMemo(() => {
+    if (debouncedQuery.length < 2) return [];
+    return allLeaves.filter(leaf =>
+      leaf.name.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+      (leaf.description?.toLowerCase().includes(debouncedQuery.toLowerCase()) ?? false)
+    );
+  }, [allLeaves, debouncedQuery]);
 
   const isOpen = open && debouncedQuery.length >= 2;
 
