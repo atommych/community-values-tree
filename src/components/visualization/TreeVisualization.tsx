@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -19,33 +19,51 @@ const nodeTypes = { valueNode: ValueNodeComponent };
 interface TreeVisualizationProps {
   treeRoot: ValueNode;
   lcaResult: LCAResult;
+  visibleNodeIds: string[];
 }
 
-export function TreeVisualization({ treeRoot, lcaResult }: TreeVisualizationProps) {
+export function TreeVisualization({ treeRoot, lcaResult, visibleNodeIds }: TreeVisualizationProps) {
+  const [showAllValues, setShowAllValues] = useState(false);
   const { nodes, edges } = useMemo(
-    () => buildFlowGraph(treeRoot, lcaResult),
-    [treeRoot, lcaResult]
+    () => buildFlowGraph(treeRoot, lcaResult, visibleNodeIds, showAllValues),
+    [treeRoot, lcaResult, visibleNodeIds, showAllValues]
   );
 
   return (
-    <div className="w-full h-[600px] rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.3 }}
-        minZoom={0.2}
-        maxZoom={2}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background gap={24} size={1} color="#e2e8f0" />
-        <Controls />
-        <MiniMap
-          nodeColor={(n) => (n.data as { color?: string }).color ?? '#94a3b8'}
-          maskColor="rgba(241,245,249,0.7)"
-        />
-      </ReactFlow>
+    <div>
+      <div className="mb-3 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setShowAllValues((prev) => !prev)}
+          aria-pressed={showAllValues}
+          className={`rounded-md px-3 py-1.5 text-sm font-medium border transition-colors ${
+            showAllValues
+              ? 'bg-slate-900 text-white border-slate-900'
+              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+          }`}
+        >
+          Mostrar todos Valores
+        </button>
+      </div>
+      <div className="w-full h-[600px] rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.3 }}
+          minZoom={0.2}
+          maxZoom={2}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background gap={24} size={1} color="#e2e8f0" />
+          <Controls />
+          <MiniMap
+            nodeColor={(n) => (n.data as { color?: string }).color ?? '#94a3b8'}
+            maskColor="rgba(241,245,249,0.7)"
+          />
+        </ReactFlow>
+      </div>
     </div>
   );
 }
@@ -58,22 +76,29 @@ interface D3Node {
   children?: D3Node[];
 }
 
-function valueNodeToD3(node: ValueNode): D3Node {
+function valueNodeToD3(node: ValueNode, visibleSet?: Set<string>): D3Node {
+  const children = node.children
+    .filter((child) => !visibleSet || visibleSet.has(child.id))
+    .map((child) => valueNodeToD3(child, visibleSet));
+
   return {
     id: node.id,
     name: node.name,
     level: node.level,
     colorHex: node.colorHex,
-    children: node.children.length > 0 ? node.children.map(valueNodeToD3) : undefined,
+    children: children.length > 0 ? children : undefined,
   };
 }
 
 function buildFlowGraph(
   treeRoot: ValueNode,
-  lcaResult: LCAResult
+  lcaResult: LCAResult,
+  visibleNodeIds: string[],
+  showAllValues: boolean
 ): { nodes: Node[]; edges: Edge[] } {
   const commonSet = new Set(lcaResult.commonAncestorIds);
-  const d3Root = hierarchy<D3Node>(valueNodeToD3(treeRoot));
+  const visibleSet = showAllValues ? null : new Set(visibleNodeIds);
+  const d3Root = hierarchy<D3Node>(valueNodeToD3(treeRoot, visibleSet ?? undefined));
 
   const treeLayout = tree<D3Node>().nodeSize([160, 200]);
   treeLayout(d3Root);
