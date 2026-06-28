@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface SessionCardProps {
   session: Session;
@@ -14,6 +15,9 @@ interface SessionCardProps {
 
 export function SessionCard({ session, participants }: SessionCardProps) {
   const [copied, setCopied] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const router = useRouter();
   const submittedCount = participants.filter(p => p.submittedAt).length;
   const total = participants.length;
   const progress = total > 0 ? (submittedCount / total) * 100 : 0;
@@ -23,6 +27,28 @@ export function SessionCard({ session, participants }: SessionCardProps) {
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const deactivateSession = async () => {
+    if (!window.confirm('Deseja desativar esta sessão? Novos participantes não poderão entrar.')) return;
+    setIsDeactivating(true);
+    try {
+      const res = await fetch(`/api/sessao/${session.id}/desativar`, { method: 'PATCH' });
+      if (res.ok) router.refresh();
+    } finally {
+      setIsDeactivating(false);
+    }
+  };
+
+  const deleteSession = async () => {
+    if (!window.confirm('Tem certeza que deseja apagar esta sessão? Esta ação não pode ser desfeita.')) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/sessao/${session.id}`, { method: 'DELETE' });
+      if (res.ok) router.refresh();
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -64,6 +90,24 @@ export function SessionCard({ session, participants }: SessionCardProps) {
         </Button>
         <Button asChild size="sm">
           <Link href={`/sessao/${session.code}/resultado`}>Ver resultado</Link>
+        </Button>
+        {session.isActive && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={deactivateSession}
+            disabled={isDeactivating}
+          >
+            {isDeactivating ? 'Desativando...' : 'Desativar sessão'}
+          </Button>
+        )}
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={deleteSession}
+          disabled={isDeleting}
+        >
+          {isDeleting ? 'Apagando...' : 'Apagar sessão'}
         </Button>
       </CardFooter>
     </Card>
