@@ -1,10 +1,13 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
-import { buildTree } from '@/lib/lca/tree';
+import { buildTree, flattenTree, getAncestorPath } from '@/lib/lca/tree';
 import { computeLCA } from '@/lib/lca/algorithm';
 import type { ValueRow, Participant } from '@/types/app';
 import { TreeVisualization } from '@/components/visualization/TreeVisualization';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { BackButton } from '@/components/ui/BackButton';
+import Link from 'next/link';
 
 interface ResultadoPageProps {
   params: Promise<{ code: string }>;
@@ -14,13 +17,19 @@ export default async function ResultadoPage({ params }: ResultadoPageProps) {
   const { code } = await params;
   const supabase = await createClient();
 
+  const { data: { user } } = await supabase.auth.getUser();
+
   const { data: sessData } = await supabase
     .from('sessions')
-    .select('id, name')
+    .select('id, name, is_active, facilitator_id')
     .eq('code', code.toUpperCase())
     .single();
 
   if (!sessData) notFound();
+
+  const currentUserId = user?.id ?? null;
+  const isOwner = !!currentUserId && sessData.facilitator_id === currentUserId;
+  const isActive = sessData.is_active as boolean;
 
   const [valoresRes, participantsRes, uvRes] = await Promise.all([
     supabase.from('values').select('*').order('level').order('sort_order'),
@@ -37,6 +46,8 @@ export default async function ResultadoPage({ params }: ResultadoPageProps) {
   }));
 
   const submitted = participants.filter(p => p.submittedAt);
+  const isParticipant = !!currentUserId && participants.some(p => p.userId === currentUserId);
+  const canEdit = (isOwner || isParticipant) && isActive;
 
   const selections = new Map<string, Set<string>>();
   for (const row of uvRes.data ?? []) {
@@ -48,10 +59,39 @@ export default async function ResultadoPage({ params }: ResultadoPageProps) {
   const treeRoot = buildTree(valueRows);
   const hasResults = selections.size > 0;
   const lcaResult = hasResults ? computeLCA(valueRows, selections) : null;
+  const visibleNodeIds = hasResults
+    ? (() => {
+        const nodeMap = flattenTree(treeRoot);
+        const visible = new Set<string>([treeRoot.id]);
+        for (const valueIds of selections.values()) {
+          for (const valueId of valueIds) {
+            getAncestorPath(valueId, nodeMap).forEach(id => visible.add(id));
+          }
+        }
+        return Array.from(visible);
+      })()
+    : [];
 
   return (
     <main className="min-h-screen bg-slate-50">
       <div className="max-w-6xl mx-auto px-4 py-10">
+        {/* Top navigation */}
+        <div className="flex items-center justify-between mb-8">
+          <BackButton fallback="/dashboard" label="← Voltar" />
+          <div className="flex gap-2">
+            {canEdit && (
+              <Button asChild size="sm">
+                <Link href={`/sessao/${code}?editar=1`}>Editar respostas</Link>
+              </Button>
+            )}
+            {!canEdit && (isOwner || isParticipant) && !isActive && (
+              <Button size="sm" disabled title="Sessão encerrada">
+                Editar respostas
+              </Button>
+            )}
+          </div>
+        </div>
+
         {/* Header */}
         <div className="mb-8 text-center">
           <div className="text-4xl mb-3">🌳</div>
@@ -92,7 +132,7 @@ export default async function ResultadoPage({ params }: ResultadoPageProps) {
             {lcaResult && (
               <div className="mb-10">
                 <h3 className="text-lg font-bold text-slate-900 mb-4">Árvore de Valores</h3>
-                <TreeVisualization treeRoot={treeRoot} lcaResult={lcaResult} />
+                <TreeVisualization treeRoot={treeRoot} lcaResult={lcaResult} visibleNodeIds={visibleNodeIds} />
                 <p className="text-xs text-slate-400 mt-2 text-center">
                   Nós destacados = valores em comum · Use scroll para zoom · Arraste para mover
                 </p>

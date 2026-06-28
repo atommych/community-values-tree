@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { SessionCard } from '@/components/session/SessionCard';
 import { Button } from '@/components/ui/button';
+import { LogoutButton } from '@/components/ui/LogoutButton';
 import type { Session, Participant } from '@/types/app';
 
 export default async function DashboardPage() {
@@ -11,19 +12,44 @@ export default async function DashboardPage() {
 
   if (!user) redirect('/login');
 
-  const { data: sessionsRaw } = await supabase
+  // Fetch sessions owned by the user
+  const { data: ownedRaw } = await supabase
     .from('sessions')
     .select('*')
     .eq('facilitator_id', user.id)
     .order('created_at', { ascending: false });
 
-  const sessions: Session[] = (sessionsRaw ?? []).map((s) => ({
+  // Fetch session IDs where user is a participant (but not owner)
+  const { data: participatedRaw } = await supabase
+    .from('session_participants')
+    .select('session_id')
+    .eq('user_id', user.id);
+
+  const ownedIds = new Set((ownedRaw ?? []).map(s => s.id));
+  const participatedIds = (participatedRaw ?? [])
+    .map(p => p.session_id)
+    .filter((id: string) => !ownedIds.has(id));
+
+  let participatedSessions: typeof ownedRaw = [];
+  if (participatedIds.length > 0) {
+    const { data: pSessRaw } = await supabase
+      .from('sessions')
+      .select('*')
+      .in('id', participatedIds)
+      .order('created_at', { ascending: false });
+    participatedSessions = pSessRaw ?? [];
+  }
+
+  const allSessionsRaw = [...(ownedRaw ?? []), ...(participatedSessions ?? [])];
+
+  const sessions: (Session & { isOwner: boolean })[] = allSessionsRaw.map((s) => ({
     id: s.id,
     code: s.code,
     name: s.name,
     facilitatorId: s.facilitator_id,
     createdAt: s.created_at,
     isActive: s.is_active,
+    isOwner: s.facilitator_id === user.id,
   }));
 
   const participantsMap = new Map<string, Participant[]>();
@@ -54,9 +80,12 @@ export default async function DashboardPage() {
             <h1 className="text-2xl font-extrabold text-slate-900">Minhas Sessões</h1>
             <p className="text-slate-500 text-sm mt-1">Gerencie suas dinâmicas de valores</p>
           </div>
-          <Button asChild>
-            <Link href="/sessao/criar">+ Nova sessão</Link>
-          </Button>
+          <div className="flex gap-2">
+            <LogoutButton />
+            <Button asChild>
+              <Link href="/sessao/criar">+ Nova sessão</Link>
+            </Button>
+          </div>
         </div>
 
         {sessions.length === 0 ? (
@@ -75,6 +104,7 @@ export default async function DashboardPage() {
                 key={session.id}
                 session={session}
                 participants={participantsMap.get(session.id) ?? []}
+                isOwner={session.isOwner}
               />
             ))}
           </div>
