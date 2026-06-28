@@ -76,13 +76,17 @@ interface D3Node {
   children?: D3Node[];
 }
 
-function valueNodeToD3(node: ValueNode): D3Node {
+function valueNodeToD3(node: ValueNode, visibleSet?: Set<string>): D3Node {
+  const children = node.children
+    .filter((child) => !visibleSet || visibleSet.has(child.id))
+    .map((child) => valueNodeToD3(child, visibleSet));
+
   return {
     id: node.id,
     name: node.name,
     level: node.level,
     colorHex: node.colorHex,
-    children: node.children.length > 0 ? node.children.map(valueNodeToD3) : undefined,
+    children: children.length > 0 ? children : undefined,
   };
 }
 
@@ -94,7 +98,7 @@ function buildFlowGraph(
 ): { nodes: Node[]; edges: Edge[] } {
   const commonSet = new Set(lcaResult.commonAncestorIds);
   const visibleSet = showAllValues ? null : new Set(visibleNodeIds);
-  const d3Root = hierarchy<D3Node>(valueNodeToD3(treeRoot));
+  const d3Root = hierarchy<D3Node>(valueNodeToD3(treeRoot, visibleSet ?? undefined));
 
   const treeLayout = tree<D3Node>().nodeSize([160, 200]);
   treeLayout(d3Root);
@@ -103,8 +107,6 @@ function buildFlowGraph(
   const edges: Edge[] = [];
 
   d3Root.each((d) => {
-    if (visibleSet && !visibleSet.has(d.data.id)) return;
-
     const isLCA = d.data.id === lcaResult.lcaNode.id;
     const isCommon = commonSet.has(d.data.id);
 
@@ -121,7 +123,7 @@ function buildFlowGraph(
       },
     });
 
-    if (d.parent && (!visibleSet || visibleSet.has(d.parent.data.id))) {
+    if (d.parent) {
       edges.push({
         id: `e-${d.parent.data.id}-${d.data.id}`,
         source: d.parent.data.id,
