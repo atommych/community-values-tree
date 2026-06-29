@@ -19,6 +19,10 @@ export function SessionCard({ session, participants, isOwner = true }: SessionCa
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
+
+  const handleNewParticipant = () => {
+    router.push(`/sessao/${session.code}?novo=1`);
+  };
   const submittedCount = participants.filter(p => p.submittedAt).length;
   const total = participants.length;
   const progress = total > 0 ? (submittedCount / total) * 100 : 0;
@@ -91,8 +95,8 @@ export function SessionCard({ session, participants, isOwner = true }: SessionCa
           </Button>
         )}
         {isOwner && (
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/sessao/${session.code}`}>Novo participante</Link>
+          <Button variant="outline" size="sm" onClick={handleNewParticipant}>
+            Novo participante
           </Button>
         )}
         {session.isActive ? (

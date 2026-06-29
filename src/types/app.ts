@@ -19,6 +19,7 @@ export interface Session {
 }
 
 export interface Participant {
+  participantId: string;
   sessionId: string;
   userId: string;
   displayName: string;

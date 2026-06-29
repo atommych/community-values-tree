@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ValueSelector } from '@/components/values/ValueSelector';
@@ -20,24 +20,45 @@ interface SessionInfo {
   isActive: boolean;
 }
 
+function storageKey(code: string) {
+  return `participant:${code}`;
+}
+
 export default function SessaoPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
   const code = (params.code as string).toUpperCase();
   const isEditMode = searchParams.get('editar') === '1';
+  const isNewParticipant = searchParams.get('novo') === '1';
 
   const [pageState, setPageState] = useState<PageState>('loading');
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [participantId, setParticipantId] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [joiningName, setJoiningName] = useState(false);
+  const [joinError, setJoinError] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
   const [valuesTree, setValuesTree] = useState<ValueNode | null>(null);
+
+  // Prevent double-execution when ?novo=1 causes a router.replace re-render
+  const newParticipantHandled = useRef(false);
 
   const { participants, refetch: refetchParticipants } = useParticipants(session?.id ?? '');
 
   useEffect(() => {
     async function init() {
+      // If ?novo=1 is present, clear the stored participant and redirect to the
+      // clean URL. The effect will re-run once with isNewParticipant=false and
+      // show the join form normally.
+      if (isNewParticipant && !newParticipantHandled.current) {
+        newParticipantHandled.current = true;
+        sessionStorage.removeItem(storageKey(code));
+        router.replace(`/sessao/${code}`);
+        return;
+      }
+
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -58,12 +79,19 @@ export default function SessaoPage() {
 
       setSession({ id: sessData.id, name: sessData.name, isActive: sessData.is_active });
 
-      const { data: participant } = await supabase
-        .from('session_participants')
-        .select('submitted_at')
-        .eq('session_id', sessData.id)
-        .eq('user_id', user.id)
-        .single();
+      // Look up the participant by the stored participant_id (per-device, per-session).
+      const storedPid = sessionStorage.getItem(storageKey(code));
+      let participant: { submitted_at: string | null; participant_id: string } | null = null;
+
+      if (storedPid) {
+        const { data } = await supabase
+          .from('session_participants')
+          .select('submitted_at, participant_id')
+          .eq('participant_id', storedPid)
+          .single();
+        participant = data;
+        if (participant) setParticipantId(storedPid);
+      }
 
       if (participant?.submitted_at && !isEditMode) {
         setPageState('submitted');
@@ -74,8 +102,7 @@ export default function SessaoPage() {
         const { error: deleteError } = await supabase
           .from('user_values')
           .delete()
-          .eq('session_id', sessData.id)
-          .eq('user_id', user.id);
+          .eq('participant_id', storedPid);
 
         if (deleteError) {
           console.error('[sessao] failed to clear existing values:', deleteError);
@@ -86,8 +113,7 @@ export default function SessaoPage() {
         const { error: updateError } = await supabase
           .from('session_participants')
           .update({ submitted_at: null })
-          .eq('session_id', sessData.id)
-          .eq('user_id', user.id);
+          .eq('participant_id', storedPid);
 
         if (updateError) {
           console.error('[sessao] failed to reset participant submission:', updateError);
@@ -112,41 +138,57 @@ export default function SessaoPage() {
       }
     }
     init();
-  }, [code, isEditMode, router]);
+  }, [code, isEditMode, isNewParticipant, router]);
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!displayName.trim() || !session || !userId) return;
     setJoiningName(true);
+    setJoinError(false);
     const supabase = createClient();
+    const newParticipantId = crypto.randomUUID();
     const { error } = await supabase.from('session_participants').insert({
+      participant_id: newParticipantId,
       session_id: session.id,
       user_id: userId,
       display_name: displayName.trim(),
     });
-    if (error) console.error('[handleJoin] insert error:', error);
     setJoiningName(false);
+    if (error) {
+      console.error('[handleJoin] insert error:', error);
+      setJoinError(true);
+      return;
+    }
+    sessionStorage.setItem(storageKey(code), newParticipantId);
+    setParticipantId(newParticipantId);
     await refetchParticipants();
     setPageState('select');
   };
 
   const handleSubmitValues = async (selectedIds: string[]) => {
-    if (!session || !userId) return;
+    if (!session || !userId || !participantId) return;
+    setSubmitError(false);
     const supabase = createClient();
 
-    await supabase.from('user_values').insert(
+    const { error: valuesError } = await supabase.from('user_values').insert(
       selectedIds.map(value_id => ({
         session_id: session.id,
         user_id: userId,
+        participant_id: participantId,
         value_id,
       }))
     );
 
+    if (valuesError) {
+      console.error('[handleSubmitValues] insert error:', valuesError);
+      setSubmitError(true);
+      return;
+    }
+
     await supabase
       .from('session_participants')
       .update({ submitted_at: new Date().toISOString() })
-      .eq('session_id', session.id)
-      .eq('user_id', userId);
+      .eq('participant_id', participantId);
 
     await refetchParticipants();
     setPageState('submitted');
@@ -234,6 +276,11 @@ export default function SessaoPage() {
             <Button type="submit" className="w-full" disabled={joiningName || !displayName.trim()}>
               {joiningName ? 'Entrando...' : 'Entrar na sessão →'}
             </Button>
+            {joinError && (
+              <p className="text-sm text-red-600 text-center">
+                Erro ao entrar na sessão. Tente novamente.
+              </p>
+            )}
           </form>
         </div>
       </div>
@@ -263,6 +310,13 @@ export default function SessaoPage() {
             tree={valuesTree}
             onSubmit={handleSubmitValues}
           />
+        )}
+        {submitError && (
+          <div className="fixed top-4 left-0 right-0 flex justify-center z-30 pointer-events-none">
+            <p className="pointer-events-auto rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2 shadow">
+              Erro ao enviar os valores. Tente novamente.
+            </p>
+          </div>
         )}
       </div>
     </main>

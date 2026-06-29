@@ -34,11 +34,12 @@ export default async function ResultadoPage({ params }: ResultadoPageProps) {
   const [valoresRes, participantsRes, uvRes] = await Promise.all([
     supabase.from('values').select('*').order('level').order('sort_order'),
     supabase.from('session_participants').select('*').eq('session_id', sessData.id),
-    supabase.from('user_values').select('user_id, value_id').eq('session_id', sessData.id),
+    supabase.from('user_values').select('participant_id, value_id').eq('session_id', sessData.id),
   ]);
 
   const valueRows = (valoresRes.data ?? []) as ValueRow[];
   const participants: Participant[] = (participantsRes.data ?? []).map(p => ({
+    participantId: p.participant_id,
     sessionId: p.session_id,
     userId: p.user_id,
     displayName: p.display_name,
@@ -51,9 +52,10 @@ export default async function ResultadoPage({ params }: ResultadoPageProps) {
 
   const selections = new Map<string, Set<string>>();
   for (const row of uvRes.data ?? []) {
-    const r = row as { user_id: string; value_id: string };
-    if (!selections.has(r.user_id)) selections.set(r.user_id, new Set());
-    selections.get(r.user_id)!.add(r.value_id);
+    const r = row as { participant_id: string; value_id: string };
+    if (!r.participant_id) continue;
+    if (!selections.has(r.participant_id)) selections.set(r.participant_id, new Set());
+    selections.get(r.participant_id)!.add(r.value_id);
   }
 
   const treeRoot = buildTree(valueRows);
@@ -144,10 +146,10 @@ export default async function ResultadoPage({ params }: ResultadoPageProps) {
               <h3 className="text-lg font-bold text-slate-900 mb-4">Valores por Participante</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {submitted.map(participant => {
-                  const pValues = Array.from(selections.get(participant.userId) ?? []);
+                  const pValues = Array.from(selections.get(participant.participantId) ?? []);
                   return (
                     <div
-                      key={participant.userId}
+                      key={participant.participantId}
                       className="rounded-xl bg-white border border-slate-200 shadow-sm p-5"
                     >
                       <div className="flex items-center gap-2 mb-3">
@@ -170,7 +172,7 @@ export default async function ResultadoPage({ params }: ResultadoPageProps) {
                   );
                 })}
                 {participants.filter(p => !p.submittedAt).map(p => (
-                  <div key={p.userId} className="rounded-xl bg-slate-100 border border-dashed border-slate-300 p-5 opacity-60">
+                  <div key={p.participantId} className="rounded-xl bg-slate-100 border border-dashed border-slate-300 p-5 opacity-60">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-400 text-sm">
                         ⏳
