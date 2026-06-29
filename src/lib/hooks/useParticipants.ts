@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { Participant } from '@/types/app';
 
 interface RawParticipant {
+  participant_id: string;
   session_id: string;
   user_id: string;
   display_name: string;
@@ -13,6 +14,7 @@ interface RawParticipant {
 
 function mapRow(r: RawParticipant): Participant {
   return {
+    participantId: r.participant_id,
     sessionId: r.session_id,
     userId: r.user_id,
     displayName: r.display_name,

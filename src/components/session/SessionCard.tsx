@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 
 interface SessionCardProps {
   session: Session;
@@ -21,10 +20,8 @@ export function SessionCard({ session, participants, isOwner = true }: SessionCa
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
 
-  const handleNewParticipant = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push(`/sessao/${session.code}`);
+  const handleNewParticipant = () => {
+    router.push(`/sessao/${session.code}?novo=1`);
   };
   const submittedCount = participants.filter(p => p.submittedAt).length;
   const total = participants.length;

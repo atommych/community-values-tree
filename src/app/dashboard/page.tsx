@@ -63,6 +63,7 @@ export default async function DashboardPage() {
     for (const p of pRaw ?? []) {
       const list = participantsMap.get(p.session_id) ?? [];
       list.push({
+        participantId: p.participant_id,
         sessionId: p.session_id,
         userId: p.user_id,
         displayName: p.display_name,
