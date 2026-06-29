@@ -64,11 +64,11 @@ export default function Home() {
             Exemplo de resultado
           </p>
           <pre className="text-sm text-left text-slate-700 font-mono leading-loose overflow-x-auto">
-{`           [ Respeito ]  ← Tronco Comum
-           /            \\
-     [ Empatia ]    [ Integridade ]
-     /         \\           |
-[ Escuta ]  [ Apoio ]  [ Honestidade ]`}
+{`[ Escuta ]  [ Apoio ]  [ Honestidade ]   ← Valores pessoais
+     \\         /              |
+  [ Empatia ]         [ Integridade ]     ← Tronco Comum
+        \\                  /
+           [ Autonomia ]                  ← Objetivo comum`}
           </pre>
         </div>
       </div>
