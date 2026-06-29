@@ -29,6 +29,7 @@ export interface LCAResult {
   lcaNode: ValueNode;
   commonAncestorIds: string[];
   participantCount: number;
+  trunkNodes: ValueNode[];
 }
 
 export interface UserValueRow {

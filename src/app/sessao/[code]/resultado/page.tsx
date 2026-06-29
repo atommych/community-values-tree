@@ -109,21 +109,40 @@ export default async function ResultadoPage({ params }: ResultadoPageProps) {
           </div>
         ) : (
           <>
-            {/* LCA Hero */}
+            {/* Trunk nodes */}
             {lcaResult && (
-              <div
-                className="mb-8 rounded-3xl p-8 text-white text-center shadow-lg"
-                style={{ backgroundColor: lcaResult.lcaNode.colorHex ?? '#6366f1' }}
-              >
-                <p className="text-sm font-semibold uppercase tracking-widest text-white/70 mb-2">
+              <div className="mb-8">
+                <p className="text-sm font-semibold uppercase tracking-widest text-slate-400 text-center mb-4">
                   ✦ Tronco Comum da Comunidade
                 </p>
-                <h2 className="text-4xl font-extrabold mb-2">{lcaResult.lcaNode.name}</h2>
-                {lcaResult.lcaNode.description && (
-                  <p className="text-white/80 text-lg">{lcaResult.lcaNode.description}</p>
+                {lcaResult.trunkNodes.length > 0 ? (
+                  <div className="flex flex-wrap justify-center gap-4">
+                    {lcaResult.trunkNodes.map((node) => (
+                      <div
+                        key={node.id}
+                        className="rounded-2xl p-6 text-white text-center shadow-lg flex-1 min-w-[160px] max-w-[260px]"
+                        style={{ backgroundColor: node.colorHex ?? '#6366f1', boxShadow: `0 0 24px ${node.colorHex ?? '#6366f1'}55` }}
+                      >
+                        <h2 className="text-2xl font-extrabold mb-1">{node.name}</h2>
+                        {node.description && (
+                          <p className="text-white/75 text-sm">{node.description}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div
+                    className="rounded-3xl p-8 text-white text-center shadow-lg"
+                    style={{ backgroundColor: lcaResult.lcaNode.colorHex ?? '#6366f1' }}
+                  >
+                    <h2 className="text-4xl font-extrabold mb-2">{lcaResult.lcaNode.name}</h2>
+                    {lcaResult.lcaNode.description && (
+                      <p className="text-white/80 text-lg">{lcaResult.lcaNode.description}</p>
+                    )}
+                  </div>
                 )}
-                <p className="mt-4 text-white/60 text-sm">
-                  Valor ancestral compartilhado por todos os {lcaResult.participantCount} participante{lcaResult.participantCount !== 1 ? 's' : ''}
+                <p className="text-center text-slate-400 text-sm mt-3">
+                  Valores ancestrais compartilhados por todos os {lcaResult.participantCount} participante{lcaResult.participantCount !== 1 ? 's' : ''}
                 </p>
               </div>
             )}

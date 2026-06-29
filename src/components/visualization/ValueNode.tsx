@@ -9,6 +9,7 @@ interface ValueNodeData {
   color: string;
   isLCA: boolean;
   isCommon: boolean;
+  isTrunk: boolean;
 }
 
 interface ValueNodeProps {
@@ -16,7 +17,7 @@ interface ValueNodeProps {
 }
 
 export const ValueNodeComponent = memo(function ValueNodeComponent({ data }: ValueNodeProps) {
-  const { label, level, color, isLCA, isCommon } = data;
+  const { label, level, color, isLCA, isCommon, isTrunk } = data;
 
   const sizeClasses = {
     0: 'px-5 py-3 text-base font-extrabold min-w-[120px]',
@@ -24,15 +25,15 @@ export const ValueNodeComponent = memo(function ValueNodeComponent({ data }: Val
     2: 'px-3 py-2 text-xs font-medium min-w-[80px]',
   }[level] ?? 'px-3 py-2 text-xs';
 
-  const bgColor = isLCA
+  const bgColor = isTrunk
     ? color
     : isCommon
     ? `${color}33`
     : '#f8fafc';
 
-  const textColor = isLCA ? '#ffffff' : isCommon ? color : '#64748b';
+  const textColor = isTrunk ? '#ffffff' : isCommon ? color : '#64748b';
   const borderColor = isCommon ? color : '#e2e8f0';
-  const borderWidth = isLCA ? '3px' : isCommon ? '2px' : '1px';
+  const borderWidth = isTrunk ? '3px' : isCommon ? '2px' : '1px';
 
   return (
     <div
@@ -41,15 +42,17 @@ export const ValueNodeComponent = memo(function ValueNodeComponent({ data }: Val
         backgroundColor: bgColor,
         color: textColor,
         border: `${borderWidth} solid ${borderColor}`,
-        boxShadow: isLCA ? `0 0 20px ${color}66` : undefined,
+        boxShadow: isTrunk ? `0 0 20px ${color}66` : undefined,
       }}
     >
-      <Handle type="target" position={Position.Top} style={{ background: borderColor }} />
+      {/* tree is inverted: leaves on top, root at bottom — source goes up, target comes from below */}
+      <Handle type="source" position={Position.Top} style={{ background: borderColor }} />
       <div className={sizeClasses}>
-        {isLCA && <div className="text-[10px] text-white/80 mb-0.5">✦ TRONCO COMUM</div>}
+        {isTrunk && <div className="text-[10px] text-white/80 mb-0.5">✦ TRONCO COMUM</div>}
+        {level === 0 && !isTrunk && <div className="text-[10px] text-slate-400 mb-0.5">⬇ OBJETIVO COMUM</div>}
         {label}
       </div>
-      <Handle type="source" position={Position.Bottom} style={{ background: borderColor }} />
+      <Handle type="target" position={Position.Bottom} style={{ background: borderColor }} />
     </div>
   );
 });

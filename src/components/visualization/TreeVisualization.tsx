@@ -103,23 +103,30 @@ function buildFlowGraph(
   const treeLayout = tree<D3Node>().nodeSize([160, 200]);
   treeLayout(d3Root);
 
+  let maxDepth = 0;
+  d3Root.each((d) => { if ((d as { y: number }).y > maxDepth) maxDepth = (d as { y: number }).y; });
+
   const nodes: Node[] = [];
   const edges: Edge[] = [];
+
+  const trunkSet = new Set(lcaResult.trunkNodes.map((n) => n.id));
 
   d3Root.each((d) => {
     const isLCA = d.data.id === lcaResult.lcaNode.id;
     const isCommon = commonSet.has(d.data.id);
+    const isTrunk = trunkSet.has(d.data.id);
 
     nodes.push({
       id: d.data.id,
       type: 'valueNode',
-      position: { x: (d as { x: number }).x, y: (d as { y: number }).y },
+      position: { x: (d as { x: number }).x, y: maxDepth - (d as { y: number }).y },
       data: {
         label: d.data.name,
         level: d.data.level,
         color: d.data.colorHex ?? '#6366f1',
         isLCA,
         isCommon,
+        isTrunk,
       },
     });
 
@@ -132,7 +139,7 @@ function buildFlowGraph(
           stroke: isCommon ? (d.data.colorHex ?? '#6366f1') : '#e2e8f0',
           strokeWidth: isCommon ? 2 : 1,
         },
-        animated: isLCA,
+        animated: isTrunk,
       });
     }
   });

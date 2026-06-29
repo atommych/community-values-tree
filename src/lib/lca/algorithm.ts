@@ -13,6 +13,7 @@ export function computeLCA(
       lcaNode: root,
       commonAncestorIds: [root.id],
       participantCount: 0,
+      trunkNodes: [],
     };
   }
 
@@ -43,9 +44,17 @@ export function computeLCA(
     }
   }
 
+  const trunkNodes: ValueNode[] = [];
+  for (const id of intersection) {
+    const node = nodeMap.get(id);
+    if (node && node.level === 1) trunkNodes.push(node);
+  }
+  trunkNodes.sort((a, b) => a.sortOrder - b.sortOrder);
+
   return {
     lcaNode: lca,
     commonAncestorIds: Array.from(intersection),
     participantCount: selections.size,
+    trunkNodes,
   };
 }
