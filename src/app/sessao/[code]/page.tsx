@@ -38,6 +38,8 @@ export default function SessaoPage() {
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [joiningName, setJoiningName] = useState(false);
+  const [joinError, setJoinError] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
   const [valuesTree, setValuesTree] = useState<ValueNode | null>(null);
 
   // Prevent double-execution when ?novo=1 causes a router.replace re-render
@@ -142,6 +144,7 @@ export default function SessaoPage() {
     e.preventDefault();
     if (!displayName.trim() || !session || !userId) return;
     setJoiningName(true);
+    setJoinError(false);
     const supabase = createClient();
     const newParticipantId = crypto.randomUUID();
     const { error } = await supabase.from('session_participants').insert({
@@ -150,22 +153,24 @@ export default function SessaoPage() {
       user_id: userId,
       display_name: displayName.trim(),
     });
+    setJoiningName(false);
     if (error) {
       console.error('[handleJoin] insert error:', error);
-    } else {
-      sessionStorage.setItem(storageKey(code), newParticipantId);
-      setParticipantId(newParticipantId);
+      setJoinError(true);
+      return;
     }
-    setJoiningName(false);
+    sessionStorage.setItem(storageKey(code), newParticipantId);
+    setParticipantId(newParticipantId);
     await refetchParticipants();
     setPageState('select');
   };
 
   const handleSubmitValues = async (selectedIds: string[]) => {
     if (!session || !userId || !participantId) return;
+    setSubmitError(false);
     const supabase = createClient();
 
-    await supabase.from('user_values').insert(
+    const { error: valuesError } = await supabase.from('user_values').insert(
       selectedIds.map(value_id => ({
         session_id: session.id,
         user_id: userId,
@@ -173,6 +178,12 @@ export default function SessaoPage() {
         value_id,
       }))
     );
+
+    if (valuesError) {
+      console.error('[handleSubmitValues] insert error:', valuesError);
+      setSubmitError(true);
+      return;
+    }
 
     await supabase
       .from('session_participants')
@@ -265,6 +276,11 @@ export default function SessaoPage() {
             <Button type="submit" className="w-full" disabled={joiningName || !displayName.trim()}>
               {joiningName ? 'Entrando...' : 'Entrar na sessão →'}
             </Button>
+            {joinError && (
+              <p className="text-sm text-red-600 text-center">
+                Erro ao entrar na sessão. Tente novamente.
+              </p>
+            )}
           </form>
         </div>
       </div>
@@ -294,6 +310,13 @@ export default function SessaoPage() {
             tree={valuesTree}
             onSubmit={handleSubmitValues}
           />
+        )}
+        {submitError && (
+          <div className="fixed top-4 left-0 right-0 flex justify-center z-30 pointer-events-none">
+            <p className="pointer-events-auto rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2 shadow">
+              Erro ao enviar os valores. Tente novamente.
+            </p>
+          </div>
         )}
       </div>
     </main>
